@@ -1,0 +1,91 @@
+#!/bin/bash -e
+echo "-----------------------------------------------------"
+echo -e "${BOLD}Build OHDSI Applications${FINISH_FORMAT}"
+echo "-----------------------------------------------------"
+echo "Prepare for Build..."
+
+# Define Variables for Styling Output.
+FINISH_FORMAT="\e[0m"
+BOLD="\e[1m"
+HIDDEN="\e[8m"
+FINISH_COLOR="\e[39m"
+RED="\e[31m"
+GREEN="\e[32m"
+YELLOW="\e[33m"
+
+FAILURE="${RED}${BOLD}[FAILURE]${FINISH_FORMAT}${FINISH_COLOR}"
+WARNING="${YELLOW}${BOLD}[WARNING]${FINISH_FORMAT}${FINISH_COLOR}"
+
+# Define Variables
+CONFIG_XML=/workspace/config.xml
+CONFIG_JS=/workspace/config.js
+ACHILLES_RESULT=/workspace/Data
+WEBAPI_WAR=/workspace/WebAPI/target/WebAPI.war
+
+# Check Account is root.
+if [ "$(id -u)" != "0" ]
+then
+   echo -e "${FAILURE} This script must be run as root."
+   echo "-----------------------------------------------------"
+   exit 1
+fi
+
+# Check WebAPI Config XML File
+if [ ! -f ${CONFIG_XML} ]
+then
+  echo -e "${FAILURE} WebAPI Configuration file doesn't exists!"
+  echo " - Suggestion: Mount WebAPI's configuration file to ${BOLD}${CONFIG_XML}${FINISH_FORMAT}"
+  echo "-----------------------------------------------------"
+  exit 1
+fi
+
+# Check Atlas Config JS File
+if [ ! -f ${CONFIG_JS} ]
+then
+  echo -e "${FAILURE} Atlas Configuration file doesn't exists!"
+  echo " - Suggestion: Mount Atlas's configuration file to ${BOLD}${CONFIG_JS}${FINISH_FORMAT}"
+  echo "-----------------------------------------------------"
+  exit 1
+fi
+
+# Check Achilles Data Folder
+if [ ! -d "${ACHILLES_RESULT}" ] || [ -z "$(ls -A ${ACHILLES_RESULT})" ]
+then
+  echo "${WARNING} Achilles Result Folder is empty or not exists."
+  echo " - Suggestion: Mount Achilles Output folder to ${ACHILLES_RESULT}"
+  echo "-----------------------------------------------------"
+fi
+
+# Confirm to Build
+echo "-----------------------------------------------------"
+cd /workspace/WebAPI
+if ! mvn --quiet clean package -s ${CONFIG_XML}
+then
+  echo -e "${FAILURE} Fail to build WebAPI."
+  echo " - Suggestion: Check above logs."
+  echo "-----------------------------------------------------"
+  exit 1
+fi
+
+# Check WebAPI.war is exists.
+if [ ! -f ${WEBAPI_WAR} ]
+then
+  echo -e "${FAILURE} Can't find WebAPI.war!"
+  echo " - Suggestion: Check WebAPI's Build Process"
+  echo "-----------------------------------------------------"
+  exit 1
+fi
+
+cp ${WEBAPI_WAR} /var/lib/tomcat7/webapps
+
+if ! service tomcat7 start
+then
+  echo -e "${FAILURE} Can't start Tomcat instance!"
+  echo " - Suggestion: Check tomcat's status by 'journalctl -u tomcat7'"
+  echo "-----------------------------------------------------"
+  exit 1
+fi
+
+echo -e "${GREEN}${BOLD}Install Success!!${FINISH_FORMAT}${FINISH_COLOR}"
+echo "If Atlas doesn't works well, try to check '/var/lib/tomcat7/logs/catalina.out' log file."
+echo "-----------------------------------------------------"

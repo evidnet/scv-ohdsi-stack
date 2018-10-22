@@ -1,0 +1,64 @@
+# -----------------------------------------------------
+# Dockerfile Template for OHDSI Stack
+#
+# Mount Maven Configuration XML file to /workspace/config.xml
+# Mount Atlas(Web Client)'s Config JS file to /workspace/config.js
+# Mount Achilles's Data Folder to /workspace/Data
+# -----------------------------------------------------
+
+# start from base
+FROM @base
+
+# install sed first.
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y sed
+
+# change APT Repository to Korean Mirror.
+# it'll be faster for fetch and download dependencies.
+RUN cp /etc/apt/sources.list /etc/apt/sources.list.old; \
+  sed -i 's/us.archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list; \
+  sed -i 's/kr.archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list; \ 
+  sed -i 's/archive.ubuntu.com/mirror.kakao.com/g' /etc/apt/sources.list
+
+# Install every base dependencies
+RUN apt-get update && \
+  DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential vim \
+  maven wget openjdk-8-jdk tomcat7 zip unzip
+RUN service tomcat7 stop
+
+# Create Working Directory
+RUN mkdir /workspace; mkdir /workspace/AtlasProfile; mkdir /workspace/bin
+WORKDIR /workspace
+
+# Set JAVA_HOME environment variable
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+
+# Download Sources
+RUN wget -O Achilles.zip https://github.com/OHDSI/AchillesWeb/archive/v1.0.0.zip
+RUN wget -O WebAPI.zip https://github.com/OHDSI/WebAPI/archive/v@webAPIVer.zip
+RUN wget -O Atlas.zip https://github.com/OHDSI/Atlas/archive/v@atlasVer.zip
+
+# Unzip Source and Change it.
+RUN unzip Achilles.zip; mv AchillesWeb-1.0.0 Achilles; rm -rf Achilles.zip
+RUN unzip WebAPI.zip; mv WebAPI-@webAPIVer WebAPI; rm -rf WebAPI.zip
+RUN unzip Atlas.zip; mv Atlas-@atlasVer Atlas; rm -rf Atlas.zip
+
+# Apply Config, Linking, Patching Configuration of Atlas, ...
+RUN ln -s /workspace/Atlas /var/lib/tomcat7/webapps/Atlas
+RUN ln -s /workspace/Achilles /var/lib/tomcat7/webapps/Achilles
+RUN mkdir /workspace/Data
+RUN ln -s /workspace/Data /var/lib/tomcat7/webapps/Achilles/data
+RUN rm -rf /workspace/Data
+RUN touch /workspace/config.js
+RUN rm -rf /workspace/Atlas/@configFile; ln -s /workspace/config.js /workspace/Atlas/@configFile
+RUN rm -rf /workspace/config.js
+
+# Copy Build Script
+COPY @scriptPath /workspace/bin/install
+RUN chmod a+x /workspace/bin/install
+
+# Make Error if install file doesn't copied.
+RUN cat /workspace/bin/install
+ENV PATH=$PATH:/workspace/bin
+
+CMD ["/bin/bash"]
