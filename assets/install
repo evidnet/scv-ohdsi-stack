@@ -59,7 +59,7 @@ fi
 # Confirm to Build
 echo "-----------------------------------------------------"
 cd /workspace/WebAPI
-if ! mvn --quiet clean package -s ${CONFIG_XML}
+if ! mvn --quiet clean package -s ${CONFIG_XML} -P evidnet-config
 then
   echo -e "${FAILURE} Fail to build WebAPI."
   echo " - Suggestion: Check above logs."
