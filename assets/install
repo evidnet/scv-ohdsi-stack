@@ -77,8 +77,8 @@ then
 fi
 
 cp ${WEBAPI_WAR} /var/lib/tomcat7/webapps
-
-if ! service tomcat7 start
+CATALINA_BASE=/var/lib/tomcat7 /usr/share/tomcat7/bin/catalina.sh start
+if [ "$!" != "0" ]
 then
   echo -e "${FAILURE} Can't start Tomcat instance!"
   echo " - Suggestion: Check tomcat's status by 'journalctl -u tomcat7'"

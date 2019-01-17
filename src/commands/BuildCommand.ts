@@ -8,13 +8,26 @@ import { GitTag } from '../models/GitHubResponse'
 
 const createDirectory = util.promisify(fs.mkdir)
 
-const scriptPath = 'install'
-const configFile: TagValue = (tag?: string) => {
+const configPath: TagValue = (tag?: string) => {
   if (tag === undefined) return 'js/config.js'
 
   const major = parseInt(tag.split('.')[0], 10)
   const minor = parseInt(tag.split('.')[1], 10)
   return major >= 2 && minor >= 6 ? 'js/config/app.js' : 'js/config.js'
+}
+
+const configFile: TagValue = (tag?: string) => {
+  if (tag === undefined) return 'config.js'
+  const arr = configPath(tag).split('/')
+  return arr[arr.length - 1]
+}
+
+const patchFile: TagValue = (tag?: string) => {
+  if (tag === undefined) return 'CDMResultsService.2_5.java'
+
+  const major = parseInt(tag.split('.')[0], 10)
+  const minor = parseInt(tag.split('.')[1], 10)
+  return major >= 2 && minor >= 6 ? 'CDMResultsService.2_6.java' : 'CDMResultsService.2_5.java'
 }
 
 const getVersion: ((project: string) => TagValue) = (project: string) => {
@@ -49,11 +62,12 @@ export class BuildCommand extends BuildImageCommand {
     ['@base', 'amd64/ubuntu:16.04'],
     ['@atlasVer', getVersion('Atlas')],
     ['@webAPIVer', getVersion('WebAPI')],
+    ['@configPath', configPath],
     ['@configFile', configFile],
-    ['@scriptPath', scriptPath]
+    ['@patchFile', patchFile]
   ])
 
-  tags: string[] = ['2.5', '2.6']
+  tags: string[] = ['2.5.1', '2.6.1']
 
   imageName: string = 'evidnet/ohdsi-stack'
 
@@ -68,7 +82,23 @@ export class BuildCommand extends BuildImageCommand {
   }
 
   getSources (): Array<string> {
-    return ['install']
+    return [
+      // Scripts
+      'install',
+      'tomcat-start',
+      'tomcat-stop',
+
+      // Tomcat Patch
+      'context.xml',
+
+      // Atlas Patch
+      'config.js',
+      'app.js',
+
+      // WebAPI Patch
+      'CDMResultsService.2_5.java',
+      'CDMResultsService.2_6.java'
+    ]
   }
 
   async onEvaluated (args: KVMap, options: KVMap, logger: Logger): Promise<void> {
@@ -81,7 +111,18 @@ export class BuildCommand extends BuildImageCommand {
     }
 
     await createDirectory(tempPath)
-    await copy(path.join(__dirname, '../../assets/install'), path.join(process.cwd(), './.tmp/install'))
+    await Promise.all(
+      this.getSources().map(source => {
+        let filePath: string
+        if (source.indexOf('.js') !== -1) filePath = `../../assets/javascript/${source}`
+        else if (source.indexOf('.java') !== -1) filePath = `../../assets/java/${source}`
+        else if (source.indexOf('tomcat') !== -1) filePath = `../../assets/tomcat/${source}`
+        else filePath = `../../assets/${source}`
+
+        return copy(path.join(__dirname, filePath), path.join(process.cwd(), `./.tmp/${source}`))
+      })
+    )
+
     await this.baseEvaluated(args, options, logger)
     return remove(tempPath)
   }
