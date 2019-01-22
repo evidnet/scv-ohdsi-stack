@@ -1,8 +1,4 @@
 #!/bin/bash -e
-echo "-----------------------------------------------------"
-echo -e "${BOLD}Build OHDSI Applications${FINISH_FORMAT}"
-echo "-----------------------------------------------------"
-echo "Prepare for Build..."
 
 # Define Variables for Styling Output.
 FINISH_FORMAT="\e[0m"
@@ -21,6 +17,11 @@ CONFIG_XML=/workspace/config.xml
 CONFIG_JS=/workspace/config.js
 ACHILLES_RESULT=/workspace/Data
 WEBAPI_WAR=/workspace/WebAPI/target/WebAPI.war
+
+echo "-----------------------------------------------------"
+echo -e "${BOLD}Build OHDSI Applications${FINISH_FORMAT}"
+echo "-----------------------------------------------------"
+echo "Prepare for Build..."
 
 # Check Account is root.
 if [ "$(id -u)" != "0" ]
@@ -59,6 +60,7 @@ fi
 # Confirm to Build
 echo "-----------------------------------------------------"
 cd /workspace/WebAPI
+echo "Start to build WebAPI. It'll take few minutes."
 if ! mvn --quiet clean package -s ${CONFIG_XML} -P evidnet-config
 then
   echo -e "${FAILURE} Fail to build WebAPI."
@@ -76,9 +78,10 @@ then
   exit 1
 fi
 
+# Final Phase: Run Tomcat.
+echo "-----------------------------------------------------"
 cp ${WEBAPI_WAR} /var/lib/tomcat7/webapps
-CATALINA_BASE=/var/lib/tomcat7 /usr/share/tomcat7/bin/catalina.sh start
-if [ "$!" != "0" ]
+if ! CATALINA_BASE=/var/lib/tomcat7 /usr/share/tomcat7/bin/catalina.sh start
 then
   echo -e "${FAILURE} Can't start Tomcat instance!"
   echo " - Suggestion: Check tomcat's status by 'journalctl -u tomcat7'"

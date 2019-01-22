@@ -38,21 +38,21 @@ RUN rm -rf /var/lib/tomcat7/conf/context.xml
 COPY context.xml /var/lib/tomcat7/conf/context.xml
 
 # Download Sources
-RUN wget -O Achilles.zip https://github.com/OHDSI/AchillesWeb/archive/master.zip
-RUN wget -O WebAPI.zip https://github.com/OHDSI/WebAPI/archive/v@webAPIVer.zip
-RUN wget -O Atlas.zip https://github.com/OHDSI/Atlas/archive/v@atlasVer.zip
+RUN wget -O Achilles.zip https://github.com/OHDSI/AchillesWeb/archive/master.zip && \
+  wget -O WebAPI.zip https://github.com/OHDSI/WebAPI/archive/v@webAPIVer.zip && \
+  wget -O Atlas.zip https://github.com/OHDSI/Atlas/archive/v@atlasVer.zip
 
 # Unzip Source and Change it.
-RUN unzip Achilles.zip; mv AchillesWeb-master Achilles; rm -rf Achilles.zip
-RUN unzip WebAPI.zip; mv WebAPI-@webAPIVer WebAPI; rm -rf WebAPI.zip
-RUN unzip Atlas.zip; mv Atlas-@atlasVer Atlas; rm -rf Atlas.zip
+RUN unzip Achilles.zip; mv AchillesWeb-master Achilles; rm -rf Achilles.zip && \
+  unzip WebAPI.zip; mv WebAPI-@webAPIVer WebAPI; rm -rf WebAPI.zip && \
+  unzip Atlas.zip; mv Atlas-@atlasVer Atlas; rm -rf Atlas.zip
 
 # Apply Config, Linking, Patching Configuration of Atlas, ...
-RUN ln -s /workspace/Atlas /var/lib/tomcat7/webapps/Atlas
-RUN ln -s /workspace/Achilles /var/lib/tomcat7/webapps/Achilles
-RUN mkdir /workspace/Data
-RUN ln -s /workspace/Data /var/lib/tomcat7/webapps/Achilles/data
-RUN rm -rf /workspace/Data
+RUN ln -s /workspace/Atlas /var/lib/tomcat7/webapps/Atlas && \
+  ln -s /workspace/Achilles /var/lib/tomcat7/webapps/Achilles
+RUN mkdir /workspace/Data && \
+  ln -s /workspace/Data /var/lib/tomcat7/webapps/Achilles/data && \
+  rm -rf /workspace/Data
 
 # Apply Atlas Config
 COPY @configFile /workspace/config.js
@@ -66,10 +66,14 @@ COPY @patchFile /workspace/WebAPI/src/main/java/org/ohdsi/webapi/service/CDMResu
 COPY install /workspace/bin/install
 COPY tomcat-start /workspace/bin/tomcat-start
 COPY tomcat-stop /workspace/bin/tomcat-stop
+COPY setenv.sh /usr/share/tomcat7/bin
 RUN chmod a+x /workspace/bin/install
 
 # Make Error if install file doesn't copied.
 RUN cat /workspace/bin/install
 ENV PATH=$PATH:/workspace/bin
+
+# Make Maven Offline.
+RUN cd /workspace/WebAPI && mvn dependency:resolve && mvn dependency:go-offline
 
 CMD ["/bin/bash"]

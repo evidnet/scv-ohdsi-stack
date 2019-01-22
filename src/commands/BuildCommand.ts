@@ -90,6 +90,7 @@ export class BuildCommand extends BuildImageCommand {
 
       // Tomcat Patch
       'context.xml',
+      'setenv.sh',
 
       // Atlas Patch
       'config.js',
