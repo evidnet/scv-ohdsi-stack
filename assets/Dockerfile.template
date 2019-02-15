@@ -61,6 +61,8 @@ RUN rm -rf /workspace/Atlas/@configPath; ln -s /workspace/config.js /workspace/A
 # Apply WebAPI Patch
 RUN rm -rf /workspace/WebAPI/src/main/java/org/ohdsi/webapi/service/CDMResultsService.java
 COPY @patchFile /workspace/WebAPI/src/main/java/org/ohdsi/webapi/service/CDMResultsService.java
+RUN rm -rf /workspace/WebAPI/src/main/resources/resources/vocabulary/sql/search.sql
+COPY search.sql /workspace/WebAPI/src/main/resources/resources/vocabulary/sql/search.sql
 
 # Copy Build Script
 COPY install /workspace/bin/install

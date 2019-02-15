@@ -8,6 +8,7 @@ import { GitTag } from '../models/GitHubResponse'
 
 const createDirectory = util.promisify(fs.mkdir)
 
+// JS 설정 파일의 경로를 버전별로 분류합니다.
 const configPath: TagValue = (tag?: string) => {
   if (tag === undefined) return 'js/config.js'
 
@@ -16,12 +17,14 @@ const configPath: TagValue = (tag?: string) => {
   return major >= 2 && minor >= 6 ? 'js/config/app.js' : 'js/config.js'
 }
 
+// 설정 파일의 파일 순수 이름을 반환합니다.
 const configFile: TagValue = (tag?: string) => {
   if (tag === undefined) return 'config.js'
   const arr = configPath(tag).split('/')
   return arr[arr.length - 1]
 }
 
+// 패치를 적용할 파일을 선택합니다.
 const patchFile: TagValue = (tag?: string) => {
   if (tag === undefined) return 'CDMResultsService.2_5.java'
 
@@ -30,6 +33,7 @@ const patchFile: TagValue = (tag?: string) => {
   return major >= 2 && minor >= 6 ? 'CDMResultsService.2_6.java' : 'CDMResultsService.2_5.java'
 }
 
+// 2.5.x라면 2.5.x 버전 중 가장 최신 버전을 가져오도록 합니다.
 const getVersion: ((project: string) => TagValue) = (project: string) => {
   const url = `https://api.github.com/repos/OHDSI/${project}/tags?access_token=${githubKey}`
 
@@ -98,7 +102,8 @@ export class BuildCommand extends BuildImageCommand {
 
       // WebAPI Patch
       'CDMResultsService.2_5.java',
-      'CDMResultsService.2_6.java'
+      'CDMResultsService.2_6.java',
+      'search.sql'
     ]
   }
 
@@ -115,6 +120,8 @@ export class BuildCommand extends BuildImageCommand {
     await Promise.all(
       this.getSources().map(source => {
         let filePath: string
+
+        // 폴더별로 분류해놨기 때문에 파일 path를 이렇게 지정해줍니다.
         if (source.indexOf('.js') !== -1) filePath = `../../assets/javascript/${source}`
         else if (source.indexOf('.java') !== -1) filePath = `../../assets/java/${source}`
         else if (source.indexOf('tomcat') !== -1) filePath = `../../assets/tomcat/${source}`
